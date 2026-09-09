@@ -1,4 +1,4 @@
-"""NissanLeafObdBleEntity class."""
+"""SkodaObdBleEntity base class."""
 
 from homeassistant.const import CONF_ADDRESS
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -6,8 +6,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import ATTRIBUTION, DOMAIN, NAME, VERSION
 
 
-class NissanLeafObdBleEntity(CoordinatorEntity):
-    """Config entry for nissan_leaf_obd_ble."""
+class SkodaObdBleEntity(CoordinatorEntity):
+    """Base entity for skoda_obd_ble."""
 
     def __init__(self, coordinator, config_entry) -> None:
         """Initialise."""
@@ -26,7 +26,7 @@ class NissanLeafObdBleEntity(CoordinatorEntity):
             "identifiers": {(DOMAIN, self.config_entry.data[CONF_ADDRESS])},
             "name": NAME,
             "model": VERSION,
-            "manufacturer": NAME,
+            "manufacturer": "Skoda / VAG",
         }
 
     @property
@@ -34,6 +34,5 @@ class NissanLeafObdBleEntity(CoordinatorEntity):
         """Return the state attributes."""
         return {
             "attribution": ATTRIBUTION,
-            "id": str(self.coordinator.data.get("id")),
             "integration": DOMAIN,
         }

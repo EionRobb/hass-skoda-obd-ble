@@ -1,4 +1,4 @@
-"""Adds config flow for Nissan Leaf OBD BLE."""
+"""Adds config flow for Skoda OBD BLE."""
 
 from typing import Any
 
@@ -20,16 +20,22 @@ from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
-    DOMAIN,
-    CONF_SERVICE_UUID,
     CONF_CHARACTERISTIC_UUID_READ,
     CONF_CHARACTERISTIC_UUID_WRITE,
-    DEFAULT_SERVICE_UUID,
+    CONF_PROFILE,
+    CONF_SERVICE_UUID,
     DEFAULT_CHARACTERISTIC_UUID_READ,
     DEFAULT_CHARACTERISTIC_UUID_WRITE,
+    DEFAULT_PROFILE,
+    DEFAULT_SERVICE_UUID,
+    DOMAIN,
+    PROFILE_ALL,
+    PROFILE_EV,
+    PROFILE_ICE,
+    PROFILE_PHEV,
 )
 
-LOCAL_NAMES = {"OBDBLE"}
+LOCAL_NAMES = {"OBDBLE", "LELink", "vLinker", "OBD", "IOS-Vlink", "Viecar", "V-LINK"}
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -51,7 +57,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
         """Return the options flow."""
-        return NissanLeafObdBleOptionsFlowHandler()
+        return SkodaObdBleOptionsFlowHandler()
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
@@ -119,10 +125,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_configure(
         self, user_input: dict | None = None
     ) -> FlowResult:
-        """Handle UUID configuration step."""
+        """Handle vehicle profile and UUID configuration step."""
         if user_input is not None:
             return self.async_create_entry(
-                title=self._selected_device.name,
+                title=self._selected_device.name or "Skoda OBD BLE",
                 data={CONF_ADDRESS: self._selected_device.address},
                 options=user_input,
             )
@@ -130,6 +136,17 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="configure",
             data_schema=vol.Schema(
                 {
+                    vol.Required(
+                        CONF_PROFILE,
+                        default=DEFAULT_PROFILE,
+                    ): vol.In(
+                        {
+                            PROFILE_ICE: "Skoda ICE / Hybrid (Standard OBD-II)",
+                            PROFILE_PHEV: "Skoda Superb iV / Plug-in hybrid",
+                            PROFILE_EV: "Skoda EV (Enyaq / Citigo-e / MEB UDS)",
+                            PROFILE_ALL: "All Supported Skoda Sensors",
+                        }
+                    ),
                     vol.Optional(
                         CONF_SERVICE_UUID,
                         default=DEFAULT_SERVICE_UUID,
@@ -147,8 +164,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
 
-class NissanLeafObdBleOptionsFlowHandler(config_entries.OptionsFlow):
-    """Config flow options handler for nissan_leaf_obd_ble."""
+class SkodaObdBleOptionsFlowHandler(config_entries.OptionsFlow):
+    """Config flow options handler for skoda_obd_ble."""
 
     def __init__(self) -> None:
         """Initialize options flow."""
@@ -169,6 +186,17 @@ class NissanLeafObdBleOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema(
                 {
+                    vol.Required(
+                        CONF_PROFILE,
+                        default=self.options.get(CONF_PROFILE, DEFAULT_PROFILE),
+                    ): vol.In(
+                        {
+                            PROFILE_ICE: "Skoda ICE / Hybrid (Standard OBD-II)",
+                            PROFILE_PHEV: "Skoda Superb iV / Plug-in hybrid",
+                            PROFILE_EV: "Skoda EV (Enyaq / Citigo-e / MEB UDS)",
+                            PROFILE_ALL: "All Supported Skoda Sensors",
+                        }
+                    ),
                     vol.Required(
                         "cache_values", default=self.options.get("cache_values", False)
                     ): bool,

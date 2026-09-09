@@ -1,8 +1,4 @@
-"""Custom integration to integrate Nissan Leaf OBD BLE with Home Assistant.
-
-For more details about this integration, please refer to
-https://github.com/pbutterworth/nissan-leaf-obd-ble
-"""
+"""Custom integration to integrate Skoda OBD BLE with Home Assistant."""
 
 import logging
 
@@ -15,9 +11,9 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.typing import ConfigType
 
-from py_nissan_leaf_obd_ble import NissanLeafObdBleApiClient
+from .api import SkodaObdBleApiClient
 from .const import DOMAIN, PLATFORMS, STARTUP_MESSAGE
-from .coordinator import NissanLeafObdBleDataUpdateCoordinator
+from .coordinator import SkodaObdBleDataUpdateCoordinator
 from .overrides import load_overrides
 
 _LOGGER: logging.Logger = logging.getLogger(__package__)
@@ -43,13 +39,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             f"Could not find OBDBLE device with address {address}"
         )
 
-    api = NissanLeafObdBleApiClient(ble_device)
+    api = SkodaObdBleApiClient(ble_device)
 
     extra_commands, extra_sensor_descriptions, disabled_commands = (
         await hass.async_add_executor_job(load_overrides, hass, address)
     )
 
-    coordinator = NissanLeafObdBleDataUpdateCoordinator(
+    coordinator = SkodaObdBleDataUpdateCoordinator(
         hass,
         address=address,
         api=api,

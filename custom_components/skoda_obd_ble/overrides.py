@@ -1,4 +1,4 @@
-"""Load user-defined OBD command overrides for the Nissan Leaf integration."""
+"""Load user-defined OBD command overrides for the Skoda integration."""
 
 import importlib.util
 import logging
@@ -14,10 +14,9 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.core import HomeAssistant
 
-from py_nissan_leaf_obd_ble.OBDCommand import OBDCommand
-from py_nissan_leaf_obd_ble.commands import leaf_commands
-
+from .commands import skoda_commands
 from .const import DECODERS_MODULE_FILE, OVERRIDES_FILE
+from .OBDCommand import OBDCommand
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,10 +71,12 @@ def load_overrides(
     # Merge _all_ entries with address-specific entries; address-specific wins on conflict
     command_entries: dict[str, Any] = {}
     if "_all_" in config:
-        command_entries.update(((config["_all_"] or {}).get("commands", {})))
+        all_cmds = (config.get("_all_") or {}).get("commands") or {}
+        command_entries.update(all_cmds)
     address_upper = address.upper()
     if address_upper in config:
-        command_entries.update(((config[address_upper] or {}).get("commands", {})))
+        addr_cmds = (config.get(address_upper) or {}).get("commands") or {}
+        command_entries.update(addr_cmds)
 
     extra_commands: dict[str, OBDCommand] = {}
     extra_sensor_descriptions: dict[str, SensorEntityDescription] = {}
@@ -96,7 +97,7 @@ def load_overrides(
 
         extra_commands[key] = cmd
 
-        if "sensor" in entry and key not in leaf_commands:
+        if "sensor" in entry and key not in skoda_commands:
             try:
                 extra_sensor_descriptions.update(_build_sensor_descriptions(key, entry))
             except Exception as err:
@@ -108,7 +109,7 @@ def load_overrides(
 def _load_python_module(path: Path):
     """Load a Python module from a file path."""
     try:
-        spec = importlib.util.spec_from_file_location("nissan_leaf_obd_ble_decoders", path)
+        spec = importlib.util.spec_from_file_location("skoda_obd_ble_decoders", path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         _LOGGER.info("Loaded custom decoders from %s", path)
@@ -120,7 +121,7 @@ def _load_python_module(path: Path):
 
 def _build_command(key: str, entry: dict, python_module) -> OBDCommand:
     """Build an OBDCommand, inheriting unspecified fields from the base command if it exists."""
-    base = leaf_commands.get(key)
+    base = skoda_commands.get(key)
 
     if "command" in entry:
         command = entry["command"].encode()

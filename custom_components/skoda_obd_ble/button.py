@@ -1,4 +1,4 @@
-"""Button platform for Nissan Leaf OBD BLE."""
+"""Button platform for Skoda OBD BLE."""
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
@@ -6,7 +6,7 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, NAME
-from .entity import NissanLeafObdBleEntity
+from .entity import SkodaObdBleEntity
 
 
 async def async_setup_entry(
@@ -14,10 +14,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up button platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([NissanLeafObdBleRefreshButton(coordinator, entry)])
+    async_add_entities([SkodaObdBleRefreshButton(coordinator, entry)])
 
 
-class NissanLeafObdBleRefreshButton(NissanLeafObdBleEntity, ButtonEntity):
+class SkodaObdBleRefreshButton(SkodaObdBleEntity, ButtonEntity):
     """Button that triggers an immediate coordinator refresh."""
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC

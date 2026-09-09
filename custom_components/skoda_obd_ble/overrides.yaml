@@ -1,0 +1,26 @@
+# Example overrides.yaml for Skoda OBD BLE
+# Place this file in config/custom_components/skoda_obd_ble/overrides.yaml (or as configured)
+# to add custom PIDs, override existing decoders, or disable commands.
+
+# _all_:
+#   commands:
+#     # Example: Disable fuel level polling if unsupported on your model
+#     fuel_level:
+#       enabled: false
+#
+#     # Example: Add custom Intake Air Temperature (Mode 01 0F)
+#     custom_intake_temp:
+#       command: "010F"
+#       header: "7DF"
+#       bytes: 1
+#       description: "Intake Air Temperature"
+#       decoder:
+#         type: "linear_scale"
+#         byte_offset: 0
+#         scale: 1.0
+#         offset: -40.0
+#       sensor:
+#         name: "Intake Air Temperature"
+#         unit: "°C"
+#         device_class: "temperature"
+#         state_class: "measurement"

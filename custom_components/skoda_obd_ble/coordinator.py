@@ -1,4 +1,4 @@
-"""Coodinator for Nissan Leaf OBD BLE."""
+"""Coordinator for Skoda OBD BLE."""
 
 import asyncio
 from datetime import timedelta
@@ -9,7 +9,7 @@ from homeassistant.components.bluetooth.api import async_address_present
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from py_nissan_leaf_obd_ble import NissanLeafObdBleApiClient
+from .api import SkodaObdBleApiClient
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -38,14 +38,14 @@ DEFAULT_CACHE_VALUES = True
 DEFAULT_FETCH_TIMEOUT = 90
 
 
-class NissanLeafObdBleDataUpdateCoordinator(DataUpdateCoordinator):
+class SkodaObdBleDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching data from the API."""
 
     def __init__(
         self,
         hass: HomeAssistant,
         address: str,
-        api: NissanLeafObdBleApiClient,
+        api: SkodaObdBleApiClient,
         options,
         extra_commands=None,
         extra_sensor_descriptions=None,
