@@ -41,7 +41,7 @@ _STATE_CLASSES: dict[str, SensorStateClass] = {
 
 
 def load_overrides(
-    hass: HomeAssistant, address: str
+    hass: HomeAssistant, address: str, profile_id: str
 ) -> tuple[dict[str, OBDCommand], dict[str, SensorEntityDescription], set[str]]:
     """Return (extra_commands, extra_sensor_descriptions, disabled_commands) for a BLE address.
 
@@ -68,11 +68,15 @@ def load_overrides(
     if not config:
         return {}, {}, set()
 
-    # Merge _all_ entries with address-specific entries; address-specific wins on conflict
+    # Merge global, profile, and address entries in increasing precedence.
     command_entries: dict[str, Any] = {}
     if "_all_" in config:
         all_cmds = (config.get("_all_") or {}).get("commands") or {}
         command_entries.update(all_cmds)
+    profile_cmds = (
+        ((config.get("profiles") or {}).get(profile_id) or {}).get("commands") or {}
+    )
+    command_entries.update(profile_cmds)
     address_upper = address.upper()
     if address_upper in config:
         addr_cmds = (config.get(address_upper) or {}).get("commands") or {}
@@ -97,7 +101,9 @@ def load_overrides(
 
         extra_commands[key] = cmd
 
-        if "sensor" in entry and key not in skoda_commands:
+        # Always honour an explicit sensor block.  This also lets the custom-only
+        # profile expose a command whose key deliberately matches a built-in one.
+        if "sensor" in entry:
             try:
                 extra_sensor_descriptions.update(_build_sensor_descriptions(key, entry))
             except Exception as err:

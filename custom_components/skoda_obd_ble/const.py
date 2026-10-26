@@ -1,14 +1,14 @@
-"""Constants for Skoda OBD BLE."""
+"""Constants for Vehicle OBD BLE."""
 
 # Base component constants
 from homeassistant.const import Platform
 
-NAME = "Skoda OBD BLE"
+NAME = "Vehicle OBD BLE"
 DOMAIN = "skoda_obd_ble"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
-ATTRIBUTION = "Data retrieved from vehicle via OBD-II BLE"
+ATTRIBUTION = "Data retrieved locally from the vehicle via OBD-II BLE"
 ISSUE_URL = "https://github.com/EionRobb/hass-skoda-obd-ble/issues"
 
 # Platforms
@@ -26,10 +26,12 @@ PROFILE_ICE = "skoda_ice"
 PROFILE_PHEV = "skoda_phev"
 PROFILE_EV = "skoda_ev"
 PROFILE_ALL = "all"
+PROFILE_GENERIC = "generic_obd"
+PROFILE_CUSTOM = "custom"
 
 # Defaults
 DEFAULT_NAME = DOMAIN
-DEFAULT_PROFILE = PROFILE_ICE
+DEFAULT_PROFILE = PROFILE_GENERIC
 DEFAULT_SERVICE_UUID = "0000ffe0-0000-1000-8000-00805f9b34fb"
 DEFAULT_CHARACTERISTIC_UUID_READ = "0000ffe1-0000-1000-8000-00805f9b34fb"
 DEFAULT_CHARACTERISTIC_UUID_WRITE = "0000ffe1-0000-1000-8000-00805f9b34fb"
@@ -41,7 +43,7 @@ STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------
 {NAME}
 Version: {VERSION}
-This is a custom integration for Skoda OBD BLE!
+This is a custom integration for ELM327 BLE vehicle diagnostics!
 If you have any issues with this you need to open an issue here:
 {ISSUE_URL}
 -------------------------------------------------------------------

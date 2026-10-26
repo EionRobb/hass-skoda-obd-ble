@@ -25,8 +25,9 @@ class SkodaObdBleEntity(CoordinatorEntity):
         return {
             "identifiers": {(DOMAIN, self.config_entry.data[CONF_ADDRESS])},
             "name": NAME,
-            "model": VERSION,
-            "manufacturer": "Skoda / VAG",
+            "manufacturer": "ELM327-compatible",
+            "model": "BLE OBD-II adapter",
+            "sw_version": VERSION,
         }
 
     @property
@@ -35,4 +36,14 @@ class SkodaObdBleEntity(CoordinatorEntity):
         return {
             "attribution": ATTRIBUTION,
             "integration": DOMAIN,
+        }
+
+    @property
+    def extra_state_attributes(self):
+        """Expose freshness alongside retained readings."""
+        return {
+            "last_successful_read": self.coordinator.value_last_success.get(
+                getattr(self, "_sensor", None)
+            ),
+            "connection_status": self.coordinator.connection_status,
         }

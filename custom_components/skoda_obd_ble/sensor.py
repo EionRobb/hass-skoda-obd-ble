@@ -1,4 +1,4 @@
-"""Sensor platform for Skoda OBD BLE."""
+"""Sensor platform for Vehicle OBD BLE."""
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -9,16 +9,9 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import (
-    CONF_PROFILE,
-    DEFAULT_PROFILE,
-    DOMAIN,
-    NAME,
-    PROFILE_EV,
-    PROFILE_ICE,
-    PROFILE_PHEV,
-)
+from .const import CONF_PROFILE, DEFAULT_PROFILE, DOMAIN, NAME
 from .entity import SkodaObdBleEntity
+from .profiles import get_profile
 
 SENSOR_TYPES: dict[str, SensorEntityDescription] = {
     "rpm": SensorEntityDescription(
@@ -169,34 +162,12 @@ async def async_setup_entry(
     """Set up sensor platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     profile = entry.options.get(CONF_PROFILE, DEFAULT_PROFILE)
-    profile_sensor_keys = {
-        PROFILE_PHEV: {"fuel_level", "battery_soc", "odometer"},
-        PROFILE_EV: {
-            "battery_soc",
-            "battery_temp",
-            "hv_voltage",
-            "charge_power",
-            "bat_12v_voltage",
-        },
-        PROFILE_ICE: {
-            "rpm",
-            "speed",
-            "coolant_temp",
-            "oil_temp",
-            "fuel_level",
-            "bat_12v_voltage",
-            "ambient_temp",
-            "intake_temp",
-            "engine_load",
-            "run_time",
-            "distance_since_cleared",
-        },
-    }
-    selected_keys = profile_sensor_keys.get(profile, set(SENSOR_TYPES))
+    selected_keys = get_profile(profile).sensor_keys
+    overridden_keys = set(coordinator.extra_sensor_descriptions)
     entities = [
         SkodaObdBleSensor(coordinator, entry, desc)
         for key, desc in SENSOR_TYPES.items()
-        if key in selected_keys
+        if key in selected_keys and key not in overridden_keys
     ]
     for desc in coordinator.extra_sensor_descriptions.values():
         entities.append(SkodaObdBleSensor(coordinator, entry, desc))

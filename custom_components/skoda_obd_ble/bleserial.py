@@ -52,10 +52,14 @@ class bleserial:
 
     async def _wait_for_data(self, size):
         while len(self._rx_buffer) < size:
+            if self._client is None or not self._client.is_connected:
+                raise BleakError("BLE disconnected while waiting for data")
             await asyncio.sleep(0.01)
 
     async def _wait_for_line(self):
         while b"\n" not in self._rx_buffer:
+            if self._client is None or not self._client.is_connected:
+                raise BleakError("BLE disconnected while waiting for line")
             await asyncio.sleep(0.01)
 
     def reset_input_buffer(self):
@@ -78,14 +82,14 @@ class bleserial:
         try:
             await asyncio.wait_for(self._wait_for_data(1), timeout=timeout)
         except TimeoutError:
-            logger.info(
+            logger.debug(
                 "BLE stage=no_unsolicited_data timeout=%.1fs",
                 timeout,
             )
             return b""
 
         data = bytes(self._rx_buffer)
-        logger.info("BLE stage=unsolicited_data data=%r", data)
+        logger.debug("BLE stage=unsolicited_data data=%r", data)
         return data
 
     @property
@@ -116,7 +120,7 @@ class bleserial:
     def _notification_handler(self, sender, data):
         """Handle when a GATT notification arrives."""
         if not self._first_notification_logged:
-            logger.info(
+            logger.debug(
                 "BLE stage=first_notification sender=%s data=%r", sender, bytes(data)
             )
             self._first_notification_logged = True
@@ -132,9 +136,9 @@ class bleserial:
         def on_disconnect(client):
             """Handle disconnection (expected or unexpected)."""
             if self._closing:
-                logger.info("BleakClient disconnected (expected)")
+                logger.debug("BleakClient disconnected (expected)")
             else:
-                logger.error(
+                logger.debug(
                     "BleakClient disconnected unexpectedly at stage=%s",
                     self._connection_stage,
                 )
@@ -143,7 +147,7 @@ class bleserial:
 
         try:
             self._connection_stage = "connecting"
-            logger.info(
+            logger.debug(
                 "BLE stage=connecting device=%s address=%s",
                 self._ble_device.name,
                 self._ble_device.address,
@@ -158,14 +162,14 @@ class bleserial:
             )
 
             self._connection_stage = "connected"
-            logger.info("BLE stage=connected device=%s", self._ble_device.address)
+            logger.debug("BLE stage=connected device=%s", self._ble_device.address)
             logger.debug("Connected to ble_device: %s", self._ble_device)
 
             services = self._client.services
             for service in services:
-                logger.info("BLE service discovered: %s", service.uuid)
+                logger.debug("BLE service discovered: %s", service.uuid)
                 for characteristic in service.characteristics:
-                    logger.info(
+                    logger.debug(
                         "BLE characteristic discovered: %s properties=%s",
                         characteristic.uuid,
                         characteristic.properties,
@@ -208,7 +212,7 @@ class bleserial:
                     notification_characteristics.append(characteristic.uuid)
 
             for characteristic_uuid in notification_characteristics:
-                logger.info(
+                logger.debug(
                     "BLE stage=starting_notifications characteristic=%s",
                     characteristic_uuid,
                 )
@@ -218,36 +222,36 @@ class bleserial:
                 self._notification_characteristics.append(characteristic_uuid)
 
             self._connection_stage = "notifications_started"
-            logger.info(
+            logger.debug(
                 "BLE stage=notifications_started characteristics=%s",
                 self._notification_characteristics,
             )
             logger.debug("Notifications started")
 
         except BleakNotFoundError as e:
-            logger.error("Device not found - it may have moved out of range: %s", e)
+            logger.debug("Device not found - it may have moved out of range: %s", e)
             await self.close()
             raise
 
         except BleakOutOfConnectionSlotsError:
-            logger.error(
+            logger.debug(
                 "No connection slots available - try disconnecting other devices"
             )
             await self.close()
             raise
 
         except BleakAbortedError:
-            logger.error("Connection aborted - check for interference or move closer")
+            logger.debug("Connection aborted - check for interference or move closer")
             await self.close()
             raise
 
         except BleakConnectionError as e:
-            logger.error("Connection failed: %s", e)
+            logger.debug("Connection failed: %s", e)
             await self.close()
             raise
 
         except BleakError as e:
-            logger.error("Failed to connect or start notifications: %s", e)
+            logger.debug("Failed to connect or start notifications: %s", e)
             await self.close()
             raise
 
@@ -286,7 +290,7 @@ class bleserial:
                     f"Cannot write while BLE is disconnected (stage={self._connection_stage})"
                 )
             self._connection_stage = "writing"
-            logger.info(
+            logger.debug(
                 "Writing data to characteristic UUID: %s Data: %s",
                 self._characteristic_uuid_write,
                 data,
@@ -299,7 +303,7 @@ class bleserial:
             self._connection_stage = "waiting_for_notification"
             logger.debug("Data written")
         except BleakError as e:
-            logger.error("Failed to write data: %s", e)
+            logger.debug("Failed to write data: %s", e)
             raise
 
     async def read(self, size=1):
@@ -312,7 +316,7 @@ class bleserial:
             logger.debug("Read data: %s", data)
             return bytes(data)
         except Exception as e:
-            logger.error(
+            logger.debug(
                 "Failed to read data (%s): %s",
                 type(e).__name__,
                 e,
@@ -330,10 +334,10 @@ class bleserial:
             logger.debug("Read line: %s", data)
             return bytes(data)
         except TimeoutError as e:
-            logger.error("Readline operation timed out")
+            logger.debug("Readline operation timed out")
             raise BleakError("Readline operation timed out") from e
         except Exception as e:
-            logger.error(
+            logger.debug(
                 "Failed to read line (%s): %s",
                 type(e).__name__,
                 e,

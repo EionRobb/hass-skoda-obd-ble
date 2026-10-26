@@ -29,11 +29,8 @@ from .const import (
     DEFAULT_PROFILE,
     DEFAULT_SERVICE_UUID,
     DOMAIN,
-    PROFILE_ALL,
-    PROFILE_EV,
-    PROFILE_ICE,
-    PROFILE_PHEV,
 )
+from .profiles import profile_labels
 
 LOCAL_NAMES = {"OBDBLE", "LELink", "vLinker", "OBD", "IOS-Vlink", "Viecar", "V-LINK"}
 
@@ -128,7 +125,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle vehicle profile and UUID configuration step."""
         if user_input is not None:
             return self.async_create_entry(
-                title=self._selected_device.name or "Skoda OBD BLE",
+                title=self._selected_device.name or "Vehicle OBD BLE",
                 data={CONF_ADDRESS: self._selected_device.address},
                 options=user_input,
             )
@@ -140,12 +137,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_PROFILE,
                         default=DEFAULT_PROFILE,
                     ): vol.In(
-                        {
-                            PROFILE_ICE: "Skoda ICE / Hybrid (Standard OBD-II)",
-                            PROFILE_PHEV: "Skoda Superb iV / Plug-in hybrid",
-                            PROFILE_EV: "Skoda EV (Enyaq / Citigo-e / MEB UDS)",
-                            PROFILE_ALL: "All Supported Skoda Sensors",
-                        }
+                        profile_labels()
                     ),
                     vol.Optional(
                         CONF_SERVICE_UUID,
@@ -190,15 +182,10 @@ class SkodaObdBleOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_PROFILE,
                         default=self.options.get(CONF_PROFILE, DEFAULT_PROFILE),
                     ): vol.In(
-                        {
-                            PROFILE_ICE: "Skoda ICE / Hybrid (Standard OBD-II)",
-                            PROFILE_PHEV: "Skoda Superb iV / Plug-in hybrid",
-                            PROFILE_EV: "Skoda EV (Enyaq / Citigo-e / MEB UDS)",
-                            PROFILE_ALL: "All Supported Skoda Sensors",
-                        }
+                        profile_labels()
                     ),
                     vol.Required(
-                        "cache_values", default=self.options.get("cache_values", False)
+                        "cache_values", default=self.options.get("cache_values", True)
                     ): bool,
                     vol.Required(
                         "fast_poll", default=self.options.get("fast_poll", 10)

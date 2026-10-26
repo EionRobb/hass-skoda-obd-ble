@@ -10,9 +10,9 @@
   "issue_tracker": "https://github.com/EionRobb/hass-skoda-obd-ble/issues",
   "domain": "skoda_obd_ble",
   "iot_class": "local_polling",
-  "name": "Skoda OBD BLE",
+  "name": "Vehicle OBD BLE",
   "requirements": [],
-  "version": "1.0.0",
+  "version": "1.1.0",
   "bluetooth": [
     {
       "service_uuid": "0000ffe0-0000-1000-8000-00805f9b34fb"

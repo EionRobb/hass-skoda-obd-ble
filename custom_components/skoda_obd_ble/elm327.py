@@ -110,7 +110,16 @@ class ELM327:
             characteristic_uuid_write=characteristic_uuid_write,
         )
 
-        logger.info(
+        try:
+            return await self._initialize(protocol, check_voltage, start_low_power)
+        except BaseException:
+            # Also release the BLE slot when the coordinator cancels a timed-out read.
+            await self.close()
+            raise
+
+    async def _initialize(self, protocol, check_voltage, start_low_power):
+        """Initialize the owned transport with cancellation cleanup in create."""
+        logger.debug(
             "Initializing ELM327: PROTOCOL=%s",
             ("auto" if protocol is None else protocol,),
         )
@@ -126,10 +135,9 @@ class ELM327:
 
             if self.__port is not None:
                 await self.__port.open()
-                await self.__port.wait_for_unsolicited(timeout=1.0)
 
         except Exception as e:
-            logger.warning(
+            logger.debug(
                 "An error occurred: %s %s",
                 "auto" if protocol is None else protocol,
                 e,
@@ -152,7 +160,7 @@ class ELM327:
             r = await self.__send(b"ATE0")
             if self.__isok(r, expectEcho=True):
                 break
-            logger.warning(
+            logger.debug(
                 "ATE0 attempt %s/3 did not return OK; response=%s",
                 attempt,
                 r,
@@ -232,7 +240,7 @@ class ELM327:
     async def __error(self, msg):
         """Handle fatal failures, print logger.info info and closes serial."""
         await self.close()
-        logger.error(str(msg))
+        logger.debug(str(msg))
 
     def status(self):
         """Return the status."""
@@ -262,7 +270,7 @@ class ELM327:
         """
 
         if self.__status == OBDStatus.NOT_CONNECTED:
-            logger.info("cannot enter low power when unconnected")
+            logger.debug("cannot enter low power when unconnected")
             return None
 
         lines = await self.__send(b"ATLP", delay=1, end_marker=self.ELM_LP_ACTIVE)
@@ -289,7 +297,7 @@ class ELM327:
         Returns the status from the ELM327.
         """
         if self.__status == OBDStatus.NOT_CONNECTED:
-            logger.info("cannot exit low power when unconnected")
+            logger.debug("cannot exit low power when unconnected")
             return None
 
         lines = await self.__send(b" ")
@@ -306,7 +314,7 @@ class ELM327:
         self.__status = OBDStatus.NOT_CONNECTED
 
         if self.__port is not None:
-            logger.info("closing port")
+            logger.debug("closing port")
             await self.__port.close()
             self.__port = None
 
@@ -323,7 +331,7 @@ class ELM327:
         """
 
         if self.__status == OBDStatus.NOT_CONNECTED:
-            logger.info("cannot send_and_parse() when unconnected")
+            logger.debug("cannot send_and_parse() when unconnected")
             return None
 
         # Check if we are in low power
@@ -363,13 +371,13 @@ class ELM327:
                 await self.__port.write(cmd)  # turn the string into bytes and write
                 # self.__port.flush()  # wait for the output buffer to finish transmitting
             except Exception as e:
-                logger.critical("Device disconnected while writing: %s", e)
+                logger.debug("Device disconnected while writing: %s", e)
                 self.__status = OBDStatus.NOT_CONNECTED
                 await self.__port.close()
                 self.__port = None
                 return
         else:
-            logger.info("cannot perform __write() when unconnected")
+            logger.debug("cannot perform __write() when unconnected")
 
     async def __read(self, end_marker=ELM_PROMPT):
         """Low-level read function.
@@ -379,7 +387,7 @@ class ELM327:
         returns a list of [/r/n] delimited strings
         """
         if not self.__port:
-            logger.info("cannot perform __read() when unconnected")
+            logger.debug("cannot perform __read() when unconnected")
             return []
 
         buffer = bytearray()
@@ -392,18 +400,18 @@ class ELM327:
                 # A quiet or unsupported OBD request is not a BLE link loss.
                 # Keep the connection alive so the caller can retry or move on
                 # to the remaining sensors.
-                logger.warning("Timed out waiting for ELM327 response")
+                logger.debug("Timed out waiting for ELM327 response")
                 return []
             except Exception:
                 self.__status = OBDStatus.NOT_CONNECTED
                 await self.__port.close()
                 self.__port = None
-                logger.critical("Device disconnected while reading")
+                logger.debug("Device disconnected while reading")
                 return []
 
             # if nothing was received
             if not data:
-                logger.warning("Failed to read port")
+                logger.debug("Failed to read port")
                 break
 
             buffer.extend(data)

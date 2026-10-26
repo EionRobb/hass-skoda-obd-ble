@@ -1,4 +1,4 @@
-"""Binary sensor platform for Skoda OBD BLE."""
+"""Binary sensor platform for Vehicle OBD BLE."""
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -13,10 +13,9 @@ from .const import (
     DEFAULT_PROFILE,
     DOMAIN,
     NAME,
-    PROFILE_EV,
-    PROFILE_PHEV,
 )
 from .entity import SkodaObdBleEntity
+from .profiles import get_profile
 
 BINARY_SENSOR_TYPES: dict[str, BinarySensorEntityDescription] = {
     "engine_running": BinarySensorEntityDescription(
@@ -46,10 +45,7 @@ async def async_setup_entry(
     """Set up binary_sensor platform."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     profile = entry.options.get(CONF_PROFILE, DEFAULT_PROFILE)
-    selected_keys = {
-        PROFILE_PHEV: {"engine_running"},
-        PROFILE_EV: {"engine_running", "charging"},
-    }.get(profile, {"engine_running", "check_engine"})
+    selected_keys = get_profile(profile).binary_sensor_keys
     entities = [
         SkodaObdBleBinarySensor(coordinator, entry, sensor_desc)
         for sensor_desc in BINARY_SENSOR_TYPES
@@ -77,19 +73,20 @@ class SkodaObdBleBinarySensor(SkodaObdBleEntity, BinarySensorEntity):
     @property
     def is_on(self):
         """Return true if the binary_sensor is on."""
-        val = self.coordinator.data.get(self._sensor)
+        data = self.coordinator.live_data
+        val = data.get(self._sensor)
         if val is not None:
             return bool(val)
         # Infer engine running if RPM > 0 or Speed > 0
         if self._sensor == "engine_running":
-            rpm = self.coordinator.data.get("rpm")
+            rpm = data.get("rpm")
             if rpm is not None:
                 return rpm > 0
-            soc = self.coordinator.data.get("battery_soc")
-            if soc is not None:
+            speed = data.get("speed")
+            if speed is not None and speed > 0:
                 return True
         elif self._sensor == "charging":
-            power = self.coordinator.data.get("charge_power")
+            power = data.get("charge_power")
             if power is not None:
                 return power > 0.1
         return None

@@ -1,18 +1,16 @@
-"""Custom integration to integrate Skoda OBD BLE with Home Assistant."""
+"""Custom integration for BLE ELM327 vehicle data in Home Assistant."""
 
 import logging
-
-from bleak_retry_connector import get_device
 
 from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.typing import ConfigType
 
 from .api import SkodaObdBleApiClient
-from .const import DOMAIN, PLATFORMS, STARTUP_MESSAGE
+from .const import CONF_PROFILE, DEFAULT_PROFILE, DOMAIN, PLATFORMS, STARTUP_MESSAGE
 from .coordinator import SkodaObdBleDataUpdateCoordinator
 from .overrides import load_overrides
 
@@ -31,18 +29,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         _LOGGER.info(STARTUP_MESSAGE)
 
     address: str = entry.data[CONF_ADDRESS]
-    ble_device = bluetooth.async_ble_device_from_address(
-        hass, address.upper(), True
-    ) or await get_device(address)
-    if not ble_device:
-        raise ConfigEntryNotReady(
-            f"Could not find OBDBLE device with address {address}"
-        )
-
+    ble_device = bluetooth.async_ble_device_from_address(hass, address.upper(), True)
     api = SkodaObdBleApiClient(ble_device)
 
     extra_commands, extra_sensor_descriptions, disabled_commands = (
-        await hass.async_add_executor_job(load_overrides, hass, address)
+        await hass.async_add_executor_job(
+            load_overrides,
+            hass,
+            address,
+            entry.options.get(CONF_PROFILE, DEFAULT_PROFILE),
+        )
     )
 
     coordinator = SkodaObdBleDataUpdateCoordinator(
@@ -57,32 +53,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    await coordinator.async_config_entry_first_refresh()
+    # Start available with an empty cache; cached discovery must not cause a read.
+    coordinator.async_set_updated_data(coordinator._snapshot())
+    entry.async_on_unload(coordinator.async_stop)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    @callback
-    def _async_specific_device_found(
-        service_info: bluetooth.BluetoothServiceInfoBleak,
-        change: bluetooth.BluetoothChange,
-    ) -> None:
-        """Handle re-discovery of the device."""
-        _LOGGER.debug("New service_info: %s - %s", service_info, change)
-        # have just discovered the device is back in range - ping the coordinator to update immediately
-        hass.async_create_task(coordinator.async_request_refresh())
-
-    # stuff to do when cleaning up
+    # Unlike discovery callbacks, this receives unchanged packets too. It has
+    # no replay of cached advertisements and never schedules a polling timer.
     entry.async_on_unload(
-        bluetooth.async_register_callback(
-            hass,
-            _async_specific_device_found,
-            {"address": address},
-            bluetooth.BluetoothScanningMode.ACTIVE,
-        )  # does the register callback, and returns a cancel callback for cleanup
+        bluetooth.async_register_advertisement_callback(
+            hass, coordinator.async_handle_advertisement, address.upper()
+        )
     )
 
-    async def update_options_listener(hass: HomeAssistant | None, entry: ConfigEntry):
+    async def update_options_listener(hass: HomeAssistant, entry: ConfigEntry):
         """Handle options update."""
-        coordinator.options = entry.options
+        await async_reload_entry(hass, entry)
 
     entry.async_on_unload(
         entry.add_update_listener(update_options_listener)
@@ -95,7 +81,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    hass.data.pop(DOMAIN)
+    hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+    if not hass.data.get(DOMAIN):
+        hass.data.pop(DOMAIN, None)
     return unloaded
 
 

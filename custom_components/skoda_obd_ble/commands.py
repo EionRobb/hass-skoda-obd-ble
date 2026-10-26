@@ -211,5 +211,6 @@ skoda_ev_commands: dict[str, OBDCommand] = {
 # Default full dictionary containing all base commands
 skoda_commands: dict[str, OBDCommand] = {
     **skoda_ice_commands,
+    **skoda_phev_commands,
     **skoda_ev_commands,
 }

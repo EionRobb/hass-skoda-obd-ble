@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "configure": {
-        "title": "Configure Skoda OBD BLE",
-        "description": "Select your vehicle powertrain profile and configure BLE GATT UUIDs if using a non-standard adapter.",
+        "title": "Configure Vehicle OBD BLE",
+        "description": "Select a vehicle profile and configure BLE GATT UUIDs if your adapter uses non-standard characteristics.",
         "data": {
           "profile": "Vehicle Profile",
           "service_uuid": "BLE service UUID",
@@ -11,7 +11,7 @@
           "characteristic_uuid_write": "BLE write characteristic UUID"
         },
         "data_description": {
-          "profile": "Select ICE (petrol/diesel/hybrid) or EV (Enyaq / Citigo-e / MEB).",
+          "profile": "Use generic standard OBD-II, a tested vehicle-family profile, or custom PIDs from overrides.yaml.",
           "service_uuid": "GATT service UUID used to connect to the OBD BLE dongle.",
           "characteristic_uuid_read": "GATT characteristic UUID for receiving data from the dongle.",
           "characteristic_uuid_write": "GATT characteristic UUID for sending commands to the dongle."
@@ -36,7 +36,7 @@
         },
         "data_description": {
           "profile": "Vehicle profile determining which OBD-II / UDS diagnostic commands are sent.",
-          "cache_values": "Hold on to sensor values, even when there is no data available.",
+          "cache_values": "Keep the last valid value when the vehicle sleeps or a polling cycle returns no data. The cache resets when Home Assistant restarts.",
           "fast_poll": "Polling rate to use when actively getting data from the car.",
           "slow_poll": "Polling rate to use when the car is in range, but turned off.",
           "xs_poll": "Polling rate to use when the car is out of range. Home Assistant will listen for bluetooth advertisements and update immediately if the car comes back into range.",
